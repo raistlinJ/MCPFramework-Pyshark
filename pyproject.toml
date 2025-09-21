@@ -1,0 +1,20 @@
+[project]
+name = "testmcppython"
+version = "0.1.0"
+description = "Minimal Python MCP server for Claude Desktop"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "mcp[cli]>=1.14.1",
+  "pyshark>=0.6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+# optional uv settings placeholder
+
+[tool.hatch.build.targets.wheel]
+packages = ["mcppython"]

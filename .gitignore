@@ -8,3 +8,7 @@ build/
 .DS_Store
 
 package.json
+
+__pycache__/
+
+*.lock

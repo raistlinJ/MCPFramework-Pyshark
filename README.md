@@ -1,142 +1,117 @@
-# Hello World MCP Server
+# mcppython MCP Server
 
-A simple Model Context Protocol (MCP) server that provides basic "hello world" functionality for Claude Desktop.
+A minimal Python MCP server (stdio) with example tools for general use and packet capture analysis (pyshark), ready for Claude Desktop.
 
 ## Features
+- Tools:
+  - `analyze_pcap(file_path: str, display_filter: str | None = None, packet_limit: int = 200, progress_every: int = 500)`
+  - `top_protocols(file_path: str, display_filter: str | None = None, packet_limit: int = 5000, top_n: int = 10)`
+  - `tcp_handshake_stats(file_path: str, display_filter: str | None = None, packet_limit: int = 10000)`
+  - `top_ports(file_path: str, display_filter: str | None = None, packet_limit: int = 10000, top_n: int = 20)`
+- Resource: `greeting://{name}`
+- Prompt: `Friendly Greeting`
 
-This MCP server provides two simple tools:
-- **hello**: Greets the user with a customizable name
-- **get_current_time**: Returns the current date and time
+## Requirements
+- Python >= 3.12 (recommended)
+- `tshark` installed and on PATH (required by `pyshark`)
+  - macOS: `brew install wireshark`
 
-## Prerequisites
+## Setup
 
-1. **Node.js** (version 18 or higher)
-   - Download from [nodejs.org](https://nodejs.org/)
-   - Or install via Homebrew: `brew install node`
+Using uv (recommended):
 
-2. **Claude Desktop** application installed on your machine
-
-## Installation
-
-1. **Clone or download this project** to your local machine
-
-2. **Install dependencies**:
-   ```bash
-   cd testmcppyshark
-   npm install
-   ```
-
-3. **Build the TypeScript code**:
-   ```bash
-   npm run build
-   ```
-
-## Configuration
-
-### Step 1: Update the configuration file
-
-Edit the `claude-desktop-config.json` file and update the path to match your actual project location:
-
-```json
-{
-  "mcpServers": {
-    "hello-world": {
-      "command": "node",
-      "args": ["/FULL/PATH/TO/YOUR/PROJECT/testmcppyshark/build/index.js"],
-      "env": {}
-    }
-  }
-}
+```zsh
+uv sync
 ```
 
-**Important**: Replace `/FULL/PATH/TO/YOUR/PROJECT/` with the actual absolute path to your project directory.
+Using pip:
 
-### Step 2: Configure Claude Desktop
-
-1. **Locate Claude Desktop's configuration directory**:
-   - **macOS**: `~/Library/Application Support/Claude/`
-   - **Windows**: `%APPDATA%\Claude\`
-   - **Linux**: `~/.config/Claude/`
-
-2. **Copy the configuration**:
-   ```bash
-   # On macOS
-   cp claude-desktop-config.json ~/Library/Application\ Support/Claude/claude_desktop_config.json
-   
-   # On Windows (PowerShell)
-   Copy-Item claude-desktop-config.json $env:APPDATA\Claude\claude_desktop_config.json
-   
-   # On Linux
-   cp claude-desktop-config.json ~/.config/Claude/claude_desktop_config.json
-   ```
-
-   **Note**: If you already have a `claude_desktop_config.json` file, you'll need to merge the `mcpServers` section into your existing configuration.
-
-3. **Restart Claude Desktop** completely (quit and reopen)
-
-## Usage
-
-Once configured, you can use the MCP server tools in Claude Desktop:
-
-1. **Hello Tool**:
-   - Ask Claude: "Can you say hello to me?"
-   - Or: "Use the hello tool to greet John"
-
-2. **Current Time Tool**:
-   - Ask Claude: "What's the current time?"
-   - Or: "Use the get_current_time tool"
-
-## Development
-
-### Available Scripts
-
-- `npm run build` - Compile TypeScript to JavaScript
-- `npm run start` - Run the compiled server
-- `npm run dev` - Run the server in development mode with tsx
-
-### Project Structure
-
+```zsh
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
-testmcppyshark/
-├── src/
-│   └── index.ts              # Main MCP server implementation
-├── build/                    # Compiled JavaScript (after npm run build)
-├── package.json              # Node.js project configuration
-├── tsconfig.json             # TypeScript configuration
-├── claude-desktop-config.json # Claude Desktop configuration template
-└── README.md                 # This file
+
+## Quick check
+
+```zsh
+uv run python -m py_compile server.py
 ```
+
+## Develop with MCP Inspector
+
+```zsh
+uv run mcp dev server.py
+```
+
+This launches the MCP Inspector in your browser and runs the server over stdio.
+
+## Install into Claude Desktop (with deps)
+
+Install via MCP CLI so Claude uses your project environment and dependencies:
+
+```zsh
+uv run mcp install server.py -n "TestMCPPython" --with-editable . --with 'pyshark>=0.6.0'
+```
+
+Notes:
+- `--with-editable .` ensures Claude installs your project package (declared in `pyproject.toml`).
+- The explicit `--with 'pyshark>=0.6.0'` guarantees `pyshark` is installed even if Claude cached an older command.
+- If you update the server, run the install command again or restart Claude Desktop.
+
+## Tools reference
+
+### analyze_pcap
+Arguments:
+- `file_path`: path to `.pcap`/`.pcapng`
+- `display_filter` (optional): Wireshark display filter
+- `packet_limit`: caps the number of packets scanned (soft cap)
+- `progress_every`: report progress every N packets
+
+Returns:
+- `total_packets`: scanned packets
+- `protocols`: map of highest-layer protocol counts
+- `top_sources`: list of `{ip, count}`
+- `top_destinations`: list of `{ip, count}`
+
+Progress updates are emitted in supporting clients.
+
+### top_protocols
+Returns a list of `{protocol, count, percentage}`.
+
+### tcp_handshake_stats
+Counts SYN, SYN-ACK, ACK per TCP stream and totals complete 3-way handshakes.
+
+### top_ports
+Returns per-protocol top destination ports as `{port, count, percentage}` plus
+`total_packets` and `analyzed_packets` with periodic progress.
+
+## Sample prompts for Claude Desktop
+
+You can ask Claude in natural language; it will call the appropriate MCP tools.
+
+- In the file `/path/to/capture.pcapng`, how many packets are there?
+  - Hint for Claude: call `analyze_pcap` with a high `packet_limit` and report `total_packets`.
+
+- For `/path/to/capture.pcapng`, list the 10 most common highest-layer protocols with percentages.
+  - Hint: call `top_protocols` with `top_n=10`.
+
+- Scan `/path/to/capture.pcapng` and show the top 10 TCP destination ports and top 10 UDP destination ports.
+  - Hint: call `top_ports` with `top_n=10`.
+
+- For `/path/to/capture.pcapng`, estimate how many complete TCP three-way handshakes occurred.
+  - Hint: call `tcp_handshake_stats` and report `complete_handshakes`.
+
+- Filter to TLS traffic in `/path/to/capture.pcapng` and show the top source and destination talkers.
+  - Hint: call `analyze_pcap` with `display_filter="tls"` and summarize `top_sources` and `top_destinations`.
+
+- In the file `/path/to/capture.pcapng`, how many packets are there; what subnetworks are in the RIP packets?
+  - Hint: first call `analyze_pcap` to get `total_packets`. Then call `analyze_pcap` again with `display_filter="rip"` to count RIP packets. Note: enumerating advertised RIP subnetworks (route entries) isn’t exposed yet by this server; if needed, ask to add a `rip_routes` tool to parse RIP route entries.
 
 ## Troubleshooting
-
-### Server not appearing in Claude Desktop
-
-1. **Check the path**: Ensure the path in `claude_desktop_config.json` is correct and points to the compiled `build/index.js` file
-2. **Verify build**: Run `npm run build` to ensure the TypeScript is compiled
-3. **Check file permissions**: Ensure the built file is executable
-4. **Restart Claude Desktop**: Completely quit and restart the application
-5. **Check logs**: Look in Claude Desktop's logs for any error messages
-
-### "Command not found" errors
-
-- Ensure Node.js is installed: `node --version`
-- Ensure npm is available: `npm --version`
-- If missing, install Node.js from [nodejs.org](https://nodejs.org/)
-
-### TypeScript compilation errors
-
-- Ensure all dependencies are installed: `npm install`
-- Check that TypeScript is installed: `npx tsc --version`
-
-## Extending the Server
-
-To add more tools to your MCP server:
-
-1. Add the new tool to the `tools` array in the `ListToolsRequestSchema` handler
-2. Add a new case in the `CallToolRequestSchema` handler
-3. Rebuild with `npm run build`
-4. Restart Claude Desktop
+- `pyshark` not found: Reinstall the server into Claude with `--with-editable .` and `--with 'pyshark>=0.6.0'`.
+- `tshark` missing: `brew install wireshark` and restart the server.
+- Event loop errors: These tools offload `pyshark` work to a background thread; ensure you’re on the latest server code.
 
 ## License
-
-MIT License - see package.json for details.
+TBD
