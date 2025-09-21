@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "hello-world": {
+      "command": "node",
+      "args": ["/Users/<username>/Documents/mcpframework_pyshark/build/index.js"],
+      "env": {}
+    }
+  }
+}
