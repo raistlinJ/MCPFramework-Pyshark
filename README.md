@@ -51,13 +51,42 @@ This launches the MCP Inspector in your browser and runs the server over stdio.
 Install via MCP CLI so Claude uses your project environment and dependencies:
 
 ```zsh
-uv run mcp install server.py -n "TestMCPPython" --with-editable . --with 'pyshark>=0.6.0'
+uv run mcp install /path/to/MCPFramework-Pyshark/server.py \
+  -n "TestMCPPython" \
+  --with-editable /path/to/MCPFramework-Pyshark \
+  --with 'pyshark>=0.6.0'
 ```
 
 Notes:
-- `--with-editable .` ensures Claude installs your project package (declared in `pyproject.toml`).
+- Use absolute paths: both the `server.py` argument and the `--with-editable` source path should be full paths (e.g., `/Users/you/path/to/MCPFramework-Pyshark/...`).
+- `--with-editable /path/to/MCPFramework-Pyshark` ensures Claude installs your project package (declared in `pyproject.toml`).
 - The explicit `--with 'pyshark>=0.6.0'` guarantees `pyshark` is installed even if Claude cached an older command.
 - If you update the server, run the install command again or restart Claude Desktop.
+
+## Run with Tome (uvx + MCP CLI)
+
+If you use Tome, you can run this MCP server directly with `uvx` and the MCP CLI without creating a local venv. This ensures the necessary extras and `pyshark` are available at runtime.
+
+Prereqs:
+- `uv` installed (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
+- `tshark` on your `PATH` (e.g., macOS: `brew install wireshark`)
+
+Run command:
+
+```zsh
+uvx \
+  --with 'mcp[cli]' \
+  --with 'pyshark>=0.6.0' \
+  --with-editable /path/to/MCPFramework-Pyshark \
+  mcp run /path/to/MCPFramework-Pyshark/server.py
+```
+
+Notes:
+- `--with 'mcp[cli]'` provides the MCP CLI entrypoint `mcp` for running the server via stdio.
+- `--with 'pyshark>=0.6.0'` guarantees a compatible `pyshark` at runtime.
+- Use absolute paths for both the editable source and `server.py` so Tome resolves the files correctly regardless of current working directory.
+- `--with-editable /path/to/MCPFramework-Pyshark` makes your local package available when Tome loads the server.
+- You can append `-- -h` after the run command to see server flags, e.g. `uvx … mcp run /path/to/MCPFramework-Pyshark/server.py -- -h`.
 
 ## Tools reference
 
