@@ -8,6 +8,16 @@ A minimal Python MCP server (stdio) with example tools for general use and packe
   - `top_protocols(file_path: str, display_filter: str | None = None, packet_limit: int = 5000, top_n: int = 10)`
   - `tcp_handshake_stats(file_path: str, display_filter: str | None = None, packet_limit: int = 10000)`
   - `top_ports(file_path: str, display_filter: str | None = None, packet_limit: int = 10000, top_n: int = 20)`
+  - `expert_info_summary(file_path: str, display_filter: str | None = None, packet_limit: int = 10000, top_n: int = 20)`
+  - `http_stats(file_path: str, display_filter: str | None = None, packet_limit: int = 20000, top_n: int = 20)`
+  - `dns_stats(file_path: str, display_filter: str | None = None, packet_limit: int = 20000, top_n: int = 20)`
+  - `tls_stats(file_path: str, display_filter: str | None = None, packet_limit: int = 20000, top_n: int = 20)`
+  - `extract_payload_strings(file_path: str, display_filter: str | None = None, packet_limit: int = 20000, min_length: int = 6, top_n: int = 50, exclude_tls: bool = True)`
+  - `tcp_flow_stats(file_path: str, display_filter: str | None = None, packet_limit: int = 50000, top_n: int = 20)`
+  - `udp_flow_stats(file_path: str, display_filter: str | None = None, packet_limit: int = 50000, top_n: int = 20)`
+  - `icmp_stats(file_path: str, display_filter: str | None = None, packet_limit: int = 50000)`
+  - `dns_deep_stats(file_path: str, display_filter: str | None = None, packet_limit: int = 50000, top_n: int = 20)`
+  - `ssh_stats(file_path: str, display_filter: str | None = None, packet_limit: int = 50000, top_n: int = 20)`
 - Resource: `greeting://{name}`
 - Prompt: `Friendly Greeting`
 
@@ -63,6 +73,43 @@ Notes:
 - The explicit `--with 'pyshark>=0.6.0'` guarantees `pyshark` is installed even if Claude cached an older command.
 - If you update the server, run the install command again or restart Claude Desktop.
 
+Tip (macOS zsh): set and reuse your absolute repo path
+
+```zsh
+# From the repo root
+export PYSHARK_MCP_REPO_PATH="$(pwd)"
+
+# Install into Claude Desktop using the variable
+uv run mcp install "$PYSHARK_MCP_REPO_PATH/server.py" \
+  -n "TestMCPPython" \
+  --with-editable "$PYSHARK_MCP_REPO_PATH" \
+  --with 'pyshark>=0.6.0'
+```
+
+Other shells:
+- bash (same as zsh):
+  ```bash
+  export PYSHARK_MCP_REPO_PATH="$(pwd)"
+  ```
+- fish:
+  ```fish
+  set -x PYSHARK_MCP_REPO_PATH (pwd)
+  ```
+- PowerShell (Windows):
+  ```powershell
+  $env:PYSHARK_MCP_REPO_PATH = (Get-Location).Path
+  ```
+
+One-liners without a variable (absolute path inline):
+- Claude install:
+  ```zsh
+  uv run mcp install "$(pwd)/server.py" -n "TestMCPPython" --with-editable "$(pwd)" --with 'pyshark>=0.6.0'
+  ```
+  PowerShell:
+  ```powershell
+  uv run mcp install "$(Get-Location)/server.py" -n "TestMCPPython" --with-editable "$(Get-Location)" --with 'pyshark>=0.6.0'
+  ```
+
 ## Run with Tome (uvx + MCP CLI)
 
 If you use Tome, you can run this MCP server directly with `uvx` and the MCP CLI without creating a local venv. This ensures the necessary extras and `pyshark` are available at runtime.
@@ -87,6 +134,43 @@ Notes:
 - Use absolute paths for both the editable source and `server.py` so Tome resolves the files correctly regardless of current working directory.
 - `--with-editable /path/to/MCPFramework-Pyshark` makes your local package available when Tome loads the server.
 - You can append `-- -h` after the run command to see server flags, e.g. `uvx … mcp run /path/to/MCPFramework-Pyshark/server.py -- -h`.
+
+Tip (macOS zsh): reuse the same variable for Tome
+
+```zsh
+# From the repo root
+export PYSHARK_MCP_REPO_PATH="$(pwd)"
+
+uvx \
+  --with 'mcp[cli]' \
+  --with 'pyshark>=0.6.0' \
+  --with-editable "$PYSHARK_MCP_REPO_PATH" \
+  mcp run "$PYSHARK_MCP_REPO_PATH/server.py"
+```
+
+Other shells:
+- bash (same as zsh):
+  ```bash
+  export PYSHARK_MCP_REPO_PATH="$(pwd)"
+  ```
+- fish:
+  ```fish
+  set -x PYSHARK_MCP_REPO_PATH (pwd)
+  ```
+- PowerShell (Windows):
+  ```powershell
+  $env:PYSHARK_MCP_REPO_PATH = (Get-Location).Path
+  ```
+
+One-liners without a variable (absolute path inline):
+- Tome run:
+  ```zsh
+  uvx --with 'mcp[cli]' --with 'pyshark>=0.6.0' --with-editable "$(pwd)" mcp run "$(pwd)/server.py"
+  ```
+  PowerShell:
+  ```powershell
+  uvx --with 'mcp[cli]' --with 'pyshark>=0.6.0' --with-editable "$(Get-Location)" mcp run "$(Get-Location)/server.py"
+  ```
 
 ## Tools reference
 
@@ -115,6 +199,76 @@ Counts SYN, SYN-ACK, ACK per TCP stream and totals complete 3-way handshakes.
 Returns per-protocol top destination ports as `{port, count, percentage}` plus
 `total_packets` and `analyzed_packets` with periodic progress.
 
+### expert_info_summary
+Scans Wireshark Expert Info items and returns:
+- `total_packets`, `expert_items`, `severities` (counts by severity),
+- `top_messages`: list of `{message, count}`.
+
+### http_stats
+Summarizes HTTP traffic:
+- Counts `requests`, `responses`; maps of `methods` and `status_codes`.
+- `top_hosts`: list of `{host, count}`.
+
+### dns_stats
+Summarizes DNS traffic:
+- Counts `queries`, `responses`; maps of `qtypes` and `rcodes`.
+- `top_query_names`: list of `{name, count}` (most frequent query names).
+
+### tls_stats
+Summarizes TLS traffic:
+- Counts `handshakes`; maps of TLS `versions` and `cipher_suites`.
+- `top_sni`: list of `{sni, count}` from Server Name Indication.
+
+### extract_payload_strings
+Extracts cleartext strings from non-encrypted payload bytes using the Wireshark `data` layer.
+Arguments:
+- `file_path`: pcap/pcapng path
+- `display_filter` (optional): additional filter to narrow scope
+- `packet_limit`: max packets to scan
+- `min_length`: minimum string length (default 6)
+- `top_n`: number of most frequent strings to return (default 50)
+- `exclude_tls`: when true (default), adds `not tls` to the filter
+- `include_utf8`: also attempt to extract UTF-8 strings (default true)
+- `regex_filter`: optional regex to filter discovered strings (applied to text)
+- `case_insensitive`: when true (default), `regex_filter` uses case-insensitive matching
+- `max_strings`: optional hard cap on total retained strings before ranking
+
+Returns:
+- `total_packets`, `payload_packets`, `total_strings`
+- `encodings`: counts by encoding (`ascii`, `utf-16le`, `utf-16be`)
+- `top_strings`: list of `{text, encoding, count}`
+
+### tcp_flow_stats
+Deep TCP analysis per stream:
+- Aggregates by `tcp.stream` when available; reports `streams` count.
+- Counts `syn`, `syn_ack`, `fin`, `rst`, `retransmissions`, `out_of_order`.
+- RTT stats from `tcp.analysis.ack_rtt` (ms): `rtt_ms_min`, `rtt_ms_avg`, `rtt_ms_max`.
+- Returns `top_src`/`top_dst` by packets as `{ip, count}`.
+- Returns `top_flows_by_packets`/`top_flows_by_bytes` as lists of `{stream, src, sport, dst, dport, packets, bytes, fwd_packets, fwd_bytes, rev_packets, rev_bytes, retransmissions, out_of_order}`.
+
+### udp_flow_stats
+UDP flow analysis (5-tuple):
+- Counts total `flows`, returns `top_src`/`top_dst` by packets.
+- Returns `top_flows_by_packets`/`top_flows_by_bytes` as lists of `{src, sport, dst, dport, packets, bytes}`.
+
+### icmp_stats
+ICMP and ICMPv6 summary:
+- Counts by `types` and `codes` (prefixed with protocol, e.g., `icmp:8`).
+- Totals for `echo_request`, `echo_reply`, `unreachable`, `time_exceeded`, `redirects`.
+- Unique `unique_sources` and `unique_destinations` hosts.
+
+### dns_deep_stats
+Deeper DNS metrics:
+- Transport counts: `udp` vs `tcp` usage; `truncated` messages.
+- Error stats: `nxdomain`, `servfail`.
+- RTT metrics from `dns.time` in milliseconds: `rtt_ms_min`, `rtt_ms_avg`, `rtt_ms_max`.
+- `top_servers`: responding server IPs; `top_nxdomain_names` for failed queries.
+
+### ssh_stats
+SSH protocol summary:
+- `versions` (banners), `kex_algorithms`, `host_key_algorithms`, `encryption_algorithms`, `mac_algorithms`, `auth_methods`.
+- `connections`: unique TCP streams; `top_banners` lists `{banner, count}`.
+
 ## Sample prompts for Claude Desktop
 
 You can ask Claude in natural language; it will call the appropriate MCP tools.
@@ -137,10 +291,54 @@ You can ask Claude in natural language; it will call the appropriate MCP tools.
 - In the file `/path/to/capture.pcapng`, how many packets are there; what subnetworks are in the RIP packets?
   - Hint: first call `analyze_pcap` to get `total_packets`. Then call `analyze_pcap` again with `display_filter="rip"` to count RIP packets. Note: enumerating advertised RIP subnetworks (route entries) isn’t exposed yet by this server; if needed, ask to add a `rip_routes` tool to parse RIP route entries.
 
+- Summarize TLS usage in `/path/to/capture.pcapng`: show TLS versions, top SNI, and common cipher suites.
+  - Hint: call `tls_stats` and report `versions`, `top_sni`, and `cipher_suites`.
+
+- For `/path/to/capture.pcapng`, list the most common HTTP methods and top hostnames.
+  - Hint: call `http_stats` and report `methods`, `status_codes`, and `top_hosts`.
+
+- For `/path/to/capture.pcapng`, show DNS query types and most frequent query names.
+  - Hint: call `dns_stats` and report `qtypes`, `rcodes`, and `top_query_names`.
+
+- For `/path/to/capture.pcapng`, show deep DNS metrics including NXDOMAINs, truncation, UDP vs TCP usage, and response time stats.
+  - Hint: call `dns_deep_stats` and report `nxdomain`, `truncated`, `udp`, `tcp`, and RTT stats.
+
+- Are there any Wireshark Expert Info warnings or errors in `/path/to/capture.pcapng`? Summarize by severity and show the top messages.
+  - Hint: call `expert_info_summary` and report `severities` and `top_messages`.
+
+- Find readable application payload in `/path/to/capture.pcapng` and list common strings.
+  - Hint: call `extract_payload_strings` (default `exclude_tls=true`) and show `top_strings`.
+
+- Look for credentials or tokens in HTTP payload (only if present) in `/path/to/capture.pcapng`.
+  - Hint: call `extract_payload_strings` with `display_filter="http"` and surface frequent `top_strings`.
+
+- Search for API keys or JWTs in `/path/to/capture.pcapng` payloads.
+  - Hint: call `extract_payload_strings` with `regex_filter="(api[_-]?key|bearer|eyJ[a-zA-Z0-9_\-]{10,})"` and possibly `include_utf8=true`.
+
+- For `/path/to/capture.pcapng`, analyze TCP behavior: retransmissions, out-of-order segments, and top flows by packets and bytes.
+  - Hint: call `tcp_flow_stats` and summarize `retransmissions`, `out_of_order`, `top_flows_by_packets`, `top_flows_by_bytes`.
+
+- For `/path/to/capture.pcapng`, summarize UDP flows and top talkers.
+  - Hint: call `udp_flow_stats` and report `flows`, `top_src`, `top_dst`.
+
+- For `/path/to/capture.pcapng`, summarize ICMP/ICMPv6 traffic: echo requests/replies, unreachable, time exceeded.
+  - Hint: call `icmp_stats` and report `echo_request`, `echo_reply`, `unreachable`, `time_exceeded`.
+
+- For `/path/to/capture.pcapng`, show SSH versions and algorithms used.
+  - Hint: call `ssh_stats` and report `versions`, `kex_algorithms`, `host_key_algorithms`, `encryption_algorithms`, `mac_algorithms`.
+
 ## Troubleshooting
 - `pyshark` not found: Reinstall the server into Claude with `--with-editable .` and `--with 'pyshark>=0.6.0'`.
 - `tshark` missing: `brew install wireshark` and restart the server.
 - Event loop errors: These tools offload `pyshark` work to a background thread; ensure you’re on the latest server code.
+
+Diagnostics tips:
+- View stderr logs while developing: run `uv run mcp dev /path/to/MCPFramework-Pyshark/server.py` or `uvx --with 'mcp[cli]' --with 'pyshark>=0.6.0' --with-editable /path/to/MCPFramework-Pyshark mcp run /path/to/MCPFramework-Pyshark/server.py`.
+- Confirm `tshark` is available:
+  ```zsh
+  tshark -v
+  ```
+  If missing on macOS: `brew install wireshark`.
 
 ## License
 TBD
