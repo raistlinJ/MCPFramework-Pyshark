@@ -61,17 +61,19 @@ This launches the MCP Inspector in your browser and runs the server over stdio.
 Install via MCP CLI so Claude uses your project environment and dependencies:
 
 ```zsh
-uv run mcp install /path/to/MCPFramework-Pyshark/server.py \
+# Run this from the project root so a relative script path is used (avoids
+# duplicating the absolute path inside Claude's MCP config JSON).
+uv run mcp install server.py \
   -n "TestMCPPython" \
-  --with-editable /path/to/MCPFramework-Pyshark \
+  --with-editable /absolute/path/to/MCPFramework-Pyshark \
   --with 'pyshark>=0.6.0'
 ```
 
 Notes:
-- Use absolute paths: both the `server.py` argument and the `--with-editable` source path should be full paths (e.g., `/Users/you/path/to/MCPFramework-Pyshark/...`).
-- `--with-editable /path/to/MCPFramework-Pyshark` ensures Claude installs your project package (declared in `pyproject.toml`).
+- Prefer a relative path (`server.py`) for the script when you run the install command from the project root. Claude stores the script path in its JSON; using an absolute path there plus again in `--with-editable` leads to redundancy.
+- Still use an absolute path for the `--with-editable` argument so Claude can locate your package source regardless of its working directory (e.g., `/Users/you/path/to/MCPFramework-Pyshark`).
 - The explicit `--with 'pyshark>=0.6.0'` guarantees `pyshark` is installed even if Claude cached an older command.
-- If you update the server, run the install command again or restart Claude Desktop.
+- If you update the server, re-run the install command or restart Claude Desktop.
 
 Tip (macOS zsh): set and reuse your absolute repo path
 
@@ -79,8 +81,9 @@ Tip (macOS zsh): set and reuse your absolute repo path
 # From the repo root
 export PYSHARK_MCP_REPO_PATH="$(pwd)"
 
-# Install into Claude Desktop using the variable
-uv run mcp install "$PYSHARK_MCP_REPO_PATH/server.py" \
+# Install into Claude Desktop (relative script path, absolute editable path)
+cd "$PYSHARK_MCP_REPO_PATH" && \
+uv run mcp install server.py \
   -n "TestMCPPython" \
   --with-editable "$PYSHARK_MCP_REPO_PATH" \
   --with 'pyshark>=0.6.0'
@@ -101,9 +104,9 @@ Other shells:
   ```
 
 One-liners without a variable (absolute path inline):
-- Claude install:
+- Claude install (run from repo root; relative script path):
   ```zsh
-  uv run mcp install "$(pwd)/server.py" -n "TestMCPPython" --with-editable "$(pwd)" --with 'pyshark>=0.6.0'
+  uv run mcp install server.py -n "TestMCPPython" --with-editable "$(pwd)" --with 'pyshark>=0.6.0'
   ```
   PowerShell:
   ```powershell

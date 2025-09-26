@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import datetime as _dt
 from collections import Counter
-from typing import TypedDict
+from typing import TypedDict, Any
 import asyncio as _asyncio
 
 from mcp.server.fastmcp import Context, FastMCP
@@ -2381,4 +2381,68 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# ---------------- Windows / general environment diagnostics ----------------
+
+@mcp.tool()
+async def environment_diagnostics() -> dict[str, Any]:
+    """Return environment info to diagnose pyshark/tshark issues.
+
+    Use this when the server (e.g. in Claude on Windows) reports tshark / pyshark errors
+    even though tshark is installed locally. This reports:
+      - Python version & executable
+      - pyshark import status & version
+      - Detected tshark path (shutil.which + TSHARK_PATH)
+      - tshark version output (first line)
+      - Environment variables: PATH, TSHARK_PATH, WIRESHARK_HOME (truncated if huge)
+      - Current working directory
+    """
+    import sys, os, subprocess, json, shutil
+    info: dict[str, Any] = {}
+    info["python_version"] = sys.version.split()[0]
+    info["python_executable"] = sys.executable
+    info["cwd"] = os.getcwd()
+
+    # pyshark details
+    try:
+        import pyshark  # type: ignore
+        info["pyshark_import"] = True
+        info["pyshark_version"] = getattr(pyshark, "__version__", "unknown")
+    except Exception as e:
+        info["pyshark_import"] = False
+        info["pyshark_error"] = repr(e)
+
+    # tshark detection
+    tshark_env = os.environ.get("TSHARK_PATH")
+    which_path = shutil.which("tshark")
+    info["tshark_env_TSHARK_PATH"] = tshark_env or None
+    info["tshark_which"] = which_path or None
+
+    # Attempt version
+    tshark_version_line = None
+    for candidate in filter(None, [tshark_env, which_path]):
+        try:
+            proc = subprocess.run([candidate, "-v"], capture_output=True, text=True, timeout=5)
+            out = (proc.stdout or proc.stderr or "").splitlines()
+            if out:
+                tshark_version_line = out[0].strip()
+                break
+        except Exception as e:
+            tshark_version_line = f"error: {e!r}"
+    info["tshark_version_line"] = tshark_version_line
+
+    # Environment slices (avoid overwhelming output)
+    def _truncate(val: str | None, limit: int = 400) -> str | None:
+        if val is None:
+            return None
+        return val if len(val) <= limit else val[:limit] + "...<truncated>"
+
+    info["PATH"] = _truncate(os.environ.get("PATH"))
+    info["WIRESHARK_HOME"] = _truncate(os.environ.get("WIRESHARK_HOME"))
+
+    # Common Windows path guess if not detected
+    if not which_path and os.name == "nt":
+        possible = r"C:\\Program Files\\Wireshark\\tshark.exe"
+        info["windows_default_tshark_exists"] = os.path.exists(possible)
+    return info
 
