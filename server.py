@@ -50,6 +50,25 @@ def _log(msg: str) -> None:
 _log("Starting server module load")
 
 
+def _prepare_thread_event_loop() -> None:
+    """Ensure a usable asyncio event loop in the current (worker) thread.
+
+    On Windows in some host environments (e.g. Claude Desktop sandbox) threads spawned via
+    asyncio.to_thread may not have a default loop, and some libraries (pyshark / asyncio
+    utilities they indirectly use) call get_event_loop(). This helper creates and sets a
+    new loop if absent. It is a no-op if a loop already exists.
+    """
+    try:
+        import asyncio
+        try:
+            asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+    except Exception:
+        pass
+
+
 
 
 
@@ -125,6 +144,7 @@ async def analyze_pcap(
     loop = _asyncio.get_running_loop()
 
     def _worker() -> PcapAnalysis:
+        _prepare_thread_event_loop()
         total = 0
         proto_counter: Counter[str] = Counter()
         src_counter: Counter[str] = Counter()
@@ -247,6 +267,7 @@ async def top_protocols(
     packet_limit = min(packet_limit, 10_000)
 
     def _worker() -> list[ProtocolCount]:
+        _prepare_thread_event_loop()
         total = 0
         proto_counter: Counter[str] = Counter()
         capture_kwargs = {"display_filter": display_filter, "keep_packets": False}
@@ -325,6 +346,7 @@ async def tcp_handshake_stats(
     packet_limit = min(packet_limit, 50_000)
 
     def _worker() -> TcpHandshakeStats:
+        _prepare_thread_event_loop()
         # tcp.stream id -> flags seen
         syn_seen: set[int] = set()
         syn_ack_seen: set[int] = set()
@@ -442,6 +464,7 @@ async def top_ports(
     loop = _asyncio.get_running_loop()
 
     def _worker() -> TopPorts:
+        _prepare_thread_event_loop()
         total = 0
         analyzed = 0
         tcp_counter: _Counter[int] = _Counter()
@@ -600,6 +623,7 @@ async def expert_info_summary(
     loop = _asyncio.get_running_loop()
 
     def _worker() -> ExpertInfoSummary:
+        _prepare_thread_event_loop()
         total = 0
         expert_items = 0
         from collections import Counter as _Counter
@@ -743,6 +767,7 @@ async def extract_payload_strings(
             return b""
 
     def _worker() -> PayloadStringsResult:
+        _prepare_thread_event_loop()
         import re
         from collections import Counter as _Counter
 
@@ -959,6 +984,7 @@ async def http_stats(
     loop = _asyncio.get_running_loop()
 
     def _worker() -> HTTPStats:
+        _prepare_thread_event_loop()
         total = 0
         reqs = 0
         resps = 0
@@ -1088,6 +1114,7 @@ async def dns_stats(
     loop = _asyncio.get_running_loop()
 
     def _worker() -> DNSStats:
+        _prepare_thread_event_loop()
         total = 0
         q = 0
         r = 0
@@ -1242,6 +1269,7 @@ async def tls_stats(
     loop = _asyncio.get_running_loop()
 
     def _worker() -> TLSStats:
+        _prepare_thread_event_loop()
         total = 0
         handshakes = 0
         from collections import Counter as _Counter
@@ -1400,6 +1428,7 @@ async def tcp_flow_stats(
     loop = _asyncio.get_running_loop()
 
     def _worker() -> TCPFlowStats:
+        _prepare_thread_event_loop()
         total = 0
         analyzed = 0
         syn = syn_ack = fin = rst = 0
@@ -1668,6 +1697,7 @@ async def udp_flow_stats(
     loop = _asyncio.get_running_loop()
 
     def _worker() -> UDPFlowStats:
+        _prepare_thread_event_loop()
         total = 0
         analyzed = 0
         src_counter: _Counter[str] = _Counter()
@@ -1828,6 +1858,7 @@ async def icmp_stats(
     loop = _asyncio.get_running_loop()
 
     def _worker() -> ICMPStats:
+        _prepare_thread_event_loop()
         total = 0
         v4 = 0
         v6 = 0
@@ -2020,6 +2051,7 @@ async def dns_deep_stats(
     loop = _asyncio.get_running_loop()
 
     def _worker() -> DNSDeepStats:
+        _prepare_thread_event_loop()
         total = 0
         q = r = 0
         udp = tcp = 0
@@ -2242,6 +2274,7 @@ async def ssh_stats(
             return []
 
     def _worker() -> SSHStats:
+        _prepare_thread_event_loop()
         total = 0
         versions: _Counter[str] = _Counter()
         kex: _Counter[str] = _Counter()

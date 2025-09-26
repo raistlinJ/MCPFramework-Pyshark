@@ -175,6 +175,48 @@ One-liners without a variable (absolute path inline):
   uvx --with 'mcp[cli]' --with 'pyshark>=0.6.0' --with-editable "$(Get-Location)" mcp run "$(Get-Location)/server.py"
   ```
 
+### Windows path specifics for Tome
+
+On Windows (PowerShell or CMD), prefer absolute paths for both the editable directory and the server script when using `uvx` with Tome. Either backslashes (`C:\Users\You\Projects\MCPFramework-Pyshark`) or forward slashes (`C:/Users/You/Projects/MCPFramework-Pyshark`) work with Python and `uvx`. Forward slashes often reduce escaping headaches.
+
+PowerShell (recommended):
+```powershell
+# From repo root
+$env:PYSHARK_MCP_REPO_PATH = (Get-Location).Path
+
+# Use forward slashes (safe & concise)
+uvx --with 'mcp[cli]' --with 'pyshark>=0.6.0' \
+  --with-editable "$env:PYSHARK_MCP_REPO_PATH" \
+  mcp run "$env:PYSHARK_MCP_REPO_PATH/server.py"
+
+# Or with backslashes (also works)
+uvx --with 'mcp[cli]' --with 'pyshark>=0.6.0' \
+  --with-editable "$env:PYSHARK_MCP_REPO_PATH" \
+  mcp run "$env:PYSHARK_MCP_REPO_PATH\server.py"
+```
+
+CMD (legacy shell):
+```cmd
+REM From repo root
+set PYSHARK_MCP_REPO_PATH=%cd%
+
+REM Forward slashes version
+uvx --with "mcp[cli]" --with "pyshark>=0.6.0" --with-editable "%PYSHARK_MCP_REPO_PATH%" mcp run "%PYSHARK_MCP_REPO_PATH%/server.py"
+
+REM Backslashes version
+uvx --with "mcp[cli]" --with "pyshark>=0.6.0" --with-editable "%PYSHARK_MCP_REPO_PATH%" mcp run "%PYSHARK_MCP_REPO_PATH%\server.py"
+```
+
+Spaces in path? Always wrap each path in double quotes. Example:
+```powershell
+uvx --with 'mcp[cli]' --with 'pyshark>=0.6.0' --with-editable "C:/Users/You/OneDrive - Company/MCPFramework-Pyshark" mcp run "C:/Users/You/OneDrive - Company/MCPFramework-Pyshark/server.py"
+```
+
+Troubleshooting (Windows):
+- If `tshark` is not found, install Wireshark and ensure its install dir (e.g. `C:\Program Files\Wireshark`) is in PATH, then restart the shell.
+- If Tome reports it cannot locate `server.py`, echo the variable to confirm: `echo $env:PYSHARK_MCP_REPO_PATH` (PowerShell) or `echo %PYSHARK_MCP_REPO_PATH%` (CMD).
+- If you see event loop errors, update to the latest server code (a worker thread loop initializer was added) and re-run.
+
 ## Tools reference
 
 ### analyze_pcap
