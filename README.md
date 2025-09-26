@@ -74,6 +74,7 @@ Notes:
 - Still use an absolute path for the `--with-editable` argument so Claude can locate your package source regardless of its working directory (e.g., `/Users/you/path/to/MCPFramework-Pyshark`).
 - The explicit `--with 'pyshark>=0.6.0'` guarantees `pyshark` is installed even if Claude cached an older command.
 - If you update the server, re-run the install command or restart Claude Desktop.
+- IMPORTANT (Claude Desktop File System Connector): Enable the File System connector in Claude Desktop so tools can read your local `.pcap` / `.pcapng` files. In Claude Desktop: Settings > Connectors > toggle on "File System" (grant access if prompted). If it's disabled, Claude cannot pass your file paths to MCP tools and you'll see file-not-found errors even when paths are correct.
 
 Tip (macOS zsh): set and reuse your absolute repo path
 
