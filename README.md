@@ -218,6 +218,67 @@ Troubleshooting (Windows):
 - If Tome reports it cannot locate `server.py`, echo the variable to confirm: `echo $env:PYSHARK_MCP_REPO_PATH` (PowerShell) or `echo %PYSHARK_MCP_REPO_PATH%` (CMD).
 - If you see event loop errors, update to the latest server code (a worker thread loop initializer was added) and re-run.
 
+## Use with `mcp-client-for-ollama`
+
+You can run this MCP server alongside [jonigl/mcp-client-for-ollama](https://github.com/jonigl/mcp-client-for-ollama) to expose packet-analysis tools directly inside the Ollama web UI.
+
+### Setup steps
+1. Clone the Ollama MCP client repo and install its dependencies:
+   ```zsh
+   git clone https://github.com/jonigl/mcp-client-for-ollama.git
+   cd mcp-client-for-ollama
+   npm install
+   ```
+2. Install the official filesystem MCP server (provides file access to your captures). The npm package is published from the [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) repo:
+   ```zsh
+   npm install @modelcontextprotocol/server-filesystem
+   ```
+   (Optional) You can test run it with `npx @modelcontextprotocol/server-filesystem <path1> <path2> …` or add it directly to the config below.
+3. Create or update the MCP config file consumed by `mcp-client-for-ollama` (defaults to `config.json` in the project root). Use absolute paths for the editable checkout and any directories you want to expose via the filesystem server.
+
+### Sample `config.json`
+
+```jsonc
+{
+  "mcpServers": {
+    "pyshark-tools": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "mcp[cli]",
+        "--with",
+        "pyshark>=0.6.0",
+        "--with-editable",
+        "/absolute/path/to/MCPFramework-Pyshark",
+        "mcp",
+        "run",
+        "/absolute/path/to/MCPFramework-Pyshark/server.py"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-filesystem",
+        "/absolute/path/to/captures",
+        "/another/path/you/want/to/browse"
+      ]
+    }
+  }
+}
+```
+
+Adjust the paths to match your environment (Windows users: forward slashes work fine, e.g. `C:/Users/you/MCPFramework-Pyshark`). 
+
+### Launching
+- Invoke the module and tell it which config/model to use:
+  ```zsh
+  uv run -m mcp_client_for_ollama \
+    -j /absolute/path/to/your/config.json \
+    --model your-model-id
+  ```
+  Replace the path and model placeholders with your own values, e.g. `uv run -m mcp_client_for_ollama -j ../MCPFramework-Pyshark/claude_desktop_config.json --model gpt-oss:20b`.
+
 ## Tools reference
 
 ### analyze_pcap
