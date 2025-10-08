@@ -227,11 +227,11 @@ You can run this MCP server alongside [jonigl/mcp-client-for-ollama](https://git
    ```zsh
    git clone https://github.com/jonigl/mcp-client-for-ollama.git
    cd mcp-client-for-ollama
-   npm install
+   uv sync
    ```
 2. Install the official filesystem MCP server (provides file access to your captures). The npm package is published from the [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/) repo:
    ```zsh
-   npm install
+   npm install @modelcontextprotocol/server-filesystem
    ```
    (Optional) You can test run it with `npx @modelcontextprotocol/server-filesystem <path1> <path2> …` or add it directly to the config below.
 3. Create or update the MCP config file consumed by `mcp-client-for-ollama` (defaults to `config.json` in the project root). Use absolute paths for the editable checkout and any directories you want to expose via the filesystem server.
