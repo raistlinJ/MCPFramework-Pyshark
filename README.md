@@ -227,6 +227,7 @@ You can run this MCP server alongside [jonigl/mcp-client-for-ollama](https://git
    ```zsh
    git clone https://github.com/jonigl/mcp-client-for-ollama.git
    cd mcp-client-for-ollama
+   npm install
    uv sync
    ```
 2. Install the official filesystem MCP server (provides file access to your captures). The npm package is published from the [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers/) repo:
