@@ -279,6 +279,56 @@ Adjust the paths to match your environment (Windows users: forward slashes work 
   ```
   Replace the path and model placeholders with your own values, e.g. `uv run -m mcp_client_for_ollama -j ../MCPFramework-Pyshark/claude_desktop_config.json --model gpt-oss:20b`.
 
+### Interact with the bridge via `curl`
+
+Once the bridge is running (defaults to `http://localhost:8000`), you can call its FastAPI endpoints directly:
+
+1. Check health/status:
+   ```zsh
+   curl http://localhost:8000/health | jq
+   ```
+2. Send a non-streaming chat request (replace the model, prompt, and capture path):
+   ```zsh
+   curl -sS http://localhost:8000/api/chat \
+     -H 'Content-Type: application/json' \
+     -d '{
+       "model": "your-model-id",
+       "stream": false,
+       "messages": [
+         {"role": "system", "content": "You are a network traffic analyst who uses MCP tools."},
+         {"role": "user", "content": "Use analyze_pcap on /absolute/path/to/capture.pcapng and summarize noteworthy activity."}
+       ]
+     }'
+   ```
+   The bridge injects the configured MCP tools (including this PyShark server) before forwarding the request to Ollama.
+3. Stream results (adds `-N` and `stream: true`):
+   ```zsh
+   curl -N http://localhost:8000/api/chat \
+     -H 'Content-Type: application/json' \
+     -d '{
+       "model": "your-model-id",
+       "stream": true,
+       "messages": [
+         {"role": "user", "content": "List the loudest talkers in /absolute/path/to/capture.pcapng."}
+       ]
+     }'
+   ```
+
+#### Sample automation script
+
+For a reusable example, see `examples/curl_summarize_last_two_minutes.sh`. It wraps a `curl` call that sends the prompt **“summarize the last 2 minutes of traffic captured.”** Customize the environment variables before running:
+
+```zsh
+export MCP_BRIDGE_HOST="http://localhost:8000"        # Where mcp-client-for-ollama is listening
+export OLLAMA_MODEL="gpt-oss:20b"                     # Any model the bridge can reach
+export PCAP_PATH="/absolute/path/to/capture.pcapng"   # Capture to analyze
+export DISPLAY_FILTER='frame.time >= "2025-10-12 15:30:00"'  # Filter for the final 2 minutes
+
+./examples/curl_summarize_last_two_minutes.sh
+```
+
+The script assembles the JSON payload, hints at the `analyze_pcap` and `tcp_flow_stats` tools with the supplied `DISPLAY_FILTER`, and posts it to `/api/chat`. Adjust the filter to match the time window you want to summarize (for example, by supplying an absolute timestamp or a `frame.time_relative` range).
+
 ## Tools reference
 
 ### analyze_pcap
